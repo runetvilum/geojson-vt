@@ -3,7 +3,7 @@
 module.exports = geojsonvt;
 
 var convert = require('./convert'), // GeoJSON conversion and preprocessing
-    clip = require('./clip'),       // stripe clipping algorithm
+    clip = require('./clip'), // stripe clipping algorithm
     createTile = require('./tile'); // final simplified tile generation
 
 
@@ -41,13 +41,13 @@ function GeoJSONVT(data, options) {
 }
 
 GeoJSONVT.prototype.options = {
-    baseZoom: 14,   // max zoom to preserve detail on
-    maxZoom: 4,     // zoom to slice down to on first pass
+    baseZoom: 14, // max zoom to preserve detail on
+    maxZoom: 4, // zoom to slice down to on first pass
     maxPoints: 100, // stop slicing a tile below this number of points
-    tolerance: 3,   // simplification tolerance (higher means simpler)
-    extent: 4096,   // tile extent
-    buffer: 64,     // tile buffer on each side
-    debug: 0        // logging level (0, 1 or 2)
+    tolerance: 3, // simplification tolerance (higher means simpler)
+    extent: 4096, // tile extent
+    buffer: 64, // tile buffer on each side
+    debug: 0 // logging level (0, 1 or 2)
 };
 
 GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
@@ -74,7 +74,9 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             if (debug > 1) console.time('creation');
 
             tile = this.tiles[id] = createTile(features, z2, x, y, tileTolerance, extent, z === options.baseZoom);
-
+            tile.z = z;
+            tile.y = y;
+            tile.x = x;
             if (debug) {
                 if (debug > 1) {
                     console.log('tile z%d-%d-%d (features: %d, points: %d, simplified: %d)',
@@ -88,7 +90,7 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         }
 
         if (!cz && (z === options.maxZoom || tile.numPoints <= options.maxPoints ||
-                isClippedSquare(tile.features, extent, buffer)) || z === options.baseZoom || z === cz) {
+            isClippedSquare(tile.features, extent, buffer)) || z === options.baseZoom || z === cz) {
             tile.source = features;
             continue; // stop tiling
         }
@@ -115,23 +117,23 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
 
         tl = bl = tr = br = left = right = null;
 
-        if (!cz ||  goLeft) left  = clip(features, z2, x - k1, x + k3, 0, intersectX);
+        if (!cz || goLeft) left = clip(features, z2, x - k1, x + k3, 0, intersectX);
         if (!cz || !goLeft) right = clip(features, z2, x + k2, x + k4, 0, intersectX);
 
         if (left) {
-            if (!cz ||  goTop) tl = clip(left, z2, y - k1, y + k3, 1, intersectY);
+            if (!cz || goTop) tl = clip(left, z2, y - k1, y + k3, 1, intersectY);
             if (!cz || !goTop) bl = clip(left, z2, y + k2, y + k4, 1, intersectY);
         }
 
         if (right) {
-            if (!cz ||  goTop) tr = clip(right, z2, y - k1, y + k3, 1, intersectY);
+            if (!cz || goTop) tr = clip(right, z2, y - k1, y + k3, 1, intersectY);
             if (!cz || !goTop) br = clip(right, z2, y + k2, y + k4, 1, intersectY);
         }
 
         if (debug > 1) console.timeEnd('clipping');
 
-        if (tl) stack.push(tl, z + 1, x * 2,     y * 2);
-        if (bl) stack.push(bl, z + 1, x * 2,     y * 2 + 1);
+        if (tl) stack.push(tl, z + 1, x * 2, y * 2);
+        if (bl) stack.push(bl, z + 1, x * 2, y * 2 + 1);
         if (tr) stack.push(tr, z + 1, x * 2 + 1, y * 2);
         if (br) stack.push(br, z + 1, x * 2 + 1, y * 2 + 1);
     }
@@ -194,6 +196,7 @@ function toID(z, x, y) {
 function intersectX(a, b, x) {
     return [x, (x - a[0]) * (b[1] - a[1]) / (b[0] - a[0]) + a[1], 1];
 }
+
 function intersectY(a, b, y) {
     return [(y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]) + a[0], y, 1];
 }
